@@ -130,6 +130,8 @@ import {
   parseYarnLock,
   readZipEntry,
   splitOutputByGradleProjects,
+  isExternalReferenceUrlValid,
+  convertGitRepoUrlToHttpUrl,
 } from "./utils.js";
 let url = import.meta.url;
 if (!url.startsWith("file://")) {
@@ -698,13 +700,16 @@ function addExternalReferences(opkg) {
   }
   for (const pkg of pkgList) {
     if (pkg.externalReferences) {
-      externalReferences = externalReferences.concat(pkg.externalReferences);
+      externalReferences = externalReferences.concat(pkg.externalReferences); // TODO: need to iterate through the list pkg.externalReferences and only concat each external reference if it passes the test isExternalReferenceUrlValid
     } else {
       if (pkg.homepage?.url) {
-        externalReferences.push({
-          type: pkg.homepage.url.includes("git") ? "vcs" : "website",
-          url: pkg.homepage.url,
-        });
+        const convertedUrl = convertGitRepoUrlToHttpUrl(pkg.homepage.url)
+        if (isExternalReferenceUrlValid(converted)) {
+          externalReferences.push({
+            type: pkg.homepage.url.includes("git") ? "vcs" : "website",
+            url: convertedUrl,
+          });
+        }
       }
       if (pkg.bugs?.url) {
         externalReferences.push({
@@ -712,10 +717,10 @@ function addExternalReferences(opkg) {
           url: pkg.bugs.url,
         });
       }
-      if (pkg.repository?.url) {
+      if (pkg.repository?.url && isExternalReferenceUrlValid(pkg.repository.url)) {
         externalReferences.push({
           type: "vcs",
-          url: pkg.repository.url,
+          url: pkg.repository.url.trim(),
         });
       }
       if (pkg.distribution?.url) {

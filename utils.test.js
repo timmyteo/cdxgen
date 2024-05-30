@@ -84,6 +84,8 @@ import {
   parseYarnLock,
   readZipEntry,
   yarnLockToIdentMap,
+  isExternalReferenceUrlValid,
+  convertGitRepoUrlToHttpUrl,
 } from "./utils.js";
 
 test("SSRI test", () => {
@@ -4039,4 +4041,89 @@ test("parseMakeDFile tests", () => {
       ".cargo/registry/src/index.crates.io-hash/zstd-sys-2.0.10+zstd.1.5.6/src/bindings_zdict.rs",
     ],
   });
+});
+
+test("isExternalReferenceUrlValid tests", () => {
+  expect(
+    isExternalReferenceUrlValid("")
+  ).toBeFalsy();
+
+  expect(
+    isExternalReferenceUrlValid("git@gitlab.com:behat-chrome/chrome-mink-driver.git")
+  ).toBeFalsy();
+
+  expect(
+    isExternalReferenceUrlValid("     git@gitlab.com:behat-chrome/chrome-mink-driver.git      ")
+  ).toBeFalsy();
+
+  expect(
+    isExternalReferenceUrlValid("${repository.url}")
+  ).toBeFalsy();
+
+  // bomLink - https://cyclonedx.org/capabilities/bomlink/
+  expect(
+    isExternalReferenceUrlValid("urn:cdx:f08a6ccd-4dce-4759-bd84-c626675d60a7/1#componentA")
+  ).toBeTruthy();
+
+  // http uri - https://www.ietf.org/rfc/rfc7230.txt
+  expect(
+    isExternalReferenceUrlValid("https://gitlab.com/behat-chrome/chrome-mink-driver.git")
+  ).toBeTruthy();
+
+  expect(
+    isExternalReferenceUrlValid("     https://gitlab.com/behat-chrome/chrome-mink-driver.git     ")
+  ).toBeTruthy();
+
+  expect(
+    isExternalReferenceUrlValid("http://gitlab.com/behat-chrome/chrome-mink-driver.git")
+  ).toBeTruthy();
+
+  // mailto uri - https://www.ietf.org/rfc/rfc2368.txt
+  expect(
+    isExternalReferenceUrlValid("mailto:privacy@owasp.org")
+  ).toBeTruthy();
+
+  expect(
+    isExternalReferenceUrlValid("privacy@owasp.org")
+  ).toBeFalsy();
+
+  // tel uri - https://www.ietf.org/rfc/rfc3966.txt
+  expect(
+    isExternalReferenceUrlValid("tel:+1-212-555-1234")
+  ).toBeTruthy();
+  
+  expect(
+    isExternalReferenceUrlValid("+1-212-555-1234")
+  ).toBeFalsy();
+
+  // dns uri - https://www.ietf.org/rfc/rfc4501.txt
+  expect(
+    isExternalReferenceUrlValid("dns:world%20wide%20web.example%5c.domain.org?TYPE=TXT")
+  ).toBeTruthy();
+
+  expect(
+    isExternalReferenceUrlValid("world%20wide%20web.example%5c.domain.org?TYPE=TXT")
+  ).toBeFalsy();
+});
+
+test("convertGitRepoUrlToHttpUrl tests", () => {
+  expect(
+    convertGitRepoUrlToHttpUrl("git@github.com:npm/hosted-git-info.git")
+  ).toEqual("https://github.com/npm/hosted-git-info.git");
+
+  expect(
+    convertGitRepoUrlToHttpUrl("git@gitlab.com:behat-chrome/chrome-mink-driver.git")
+  ).toEqual("https://gitlab.com/behat-chrome/chrome-mink-driver.git");
+
+  expect(
+    convertGitRepoUrlToHttpUrl("git@gitunknown.com:npm/hosted-git-info.git")
+  ).toEqual("git@gitunknown.com:npm/hosted-git-info.git");
+
+  expect(
+    convertGitRepoUrlToHttpUrl("UNKNOWN")
+  ).toEqual("UNKNOWN");
+
+  expect(
+    convertGitRepoUrlToHttpUrl("${repository.url}")
+  ).toEqual("${repository.url}");
 });

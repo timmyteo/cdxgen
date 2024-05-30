@@ -48,6 +48,7 @@ import {
 } from "semver";
 import { xml2js } from "xml-js";
 import { getTreeWithPlugin } from "./piptree.js";
+import GitHost from "hosted-git-info"
 
 let url = import.meta.url;
 if (!url.startsWith("file://")) {
@@ -10539,4 +10540,43 @@ export function parseMakeDFile(dfile) {
   });
   pkgFilesMap[pkgName] = Array.from(filesList);
   return pkgFilesMap;
+}
+
+/**
+ * Function to validate an externalReference URL for conforming to the JSON schema or bomLink
+ * https://github.com/CycloneDX/cyclonedx-core-java/blob/75575318b268dda9e2a290761d7db11b4f414255/src/main/resources/bom-1.5.schema.json#L1140
+ * https://datatracker.ietf.org/doc/html/rfc3987#section-2.2
+ * https://cyclonedx.org/capabilities/bomlink/
+ *
+ * @param {String} url URL to validate
+ *
+ * @returns {Boolean} Flag indicating whether the supplied URL is valid or not
+ * 
+ */
+export function isExternalReferenceUrlValid(url) {
+  try {
+    new URL(url.trim());
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * Function to convert a Git repository URL to its HTTP URL counterpart
+ * Example: git@github.com:npm/hosted-git-info.git     converts to     https://github.com/npm/hosted-git-info.git
+ *
+ * @param {String} url URL to convert
+ *
+ * @returns {String} Converted URL, or original URL if conversion was not possible
+ * 
+ */
+export function convertGitRepoUrlToHttpUrl(url) {
+  const info = GitHost.fromUrl(url.trim());
+
+  if (info == null) {
+    return url;
+  }
+
+  return info.https({ noGitPlus: true });
 }
